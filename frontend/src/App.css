@@ -1,0 +1,60 @@
+/* === HERO SECTION (Gradasi Background Biru Putih Elegan) === */
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.25), /* biru lembut */
+    rgba(191, 219, 254, 0.3)  /* biru muda */
+  );
+}
+
+/* === FASILITAS CARD (Glassmorphism) === */
+.facility-card {
+  @apply bg-white/10 backdrop-blur-md rounded-2xl p-6 shadow-2xl 
+         border border-white/20 text-gray-800 cursor-pointer transition-all duration-500;
+}
+.facility-card:hover {
+  @apply scale-105 shadow-[0_0_25px_rgba(147,197,253,0.6)] bg-white/20;
+}
+
+/* === BUTTON UTAMA (Gradasi Biru Putih) === */
+.btn-primary {
+  @apply bg-gradient-to-r from-blue-500 to-sky-400 text-white font-semibold 
+         rounded-full px-6 py-2 shadow-lg hover:scale-105 hover:shadow-[0_0_15px_rgba(59,130,246,0.6)] 
+         transition-all duration-300;
+}
+
+/* === NAVBAR SCROLLED (Efek Blur dan Shadow Halus) === */
+.navbar-scrolled {
+  @apply bg-white/80 backdrop-blur-xl shadow-lg py-2 transition-all duration-500;
+}
+
+/* === FOOTER (Shadow Dalam) === */
+footer {
+  @apply shadow-inner bg-gradient-to-r from-blue-50 to-white text-gray-700;
+}
+
+/* === ANIMASI FADE IN UP === */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+/* === TOMBOL BACK TO TOP === */
+#back-to-top {
+  @apply fixed bottom-6 right-6 bg-blue-500 text-white p-3 rounded-full 
+         shadow-lg hover:bg-blue-600 transition-all duration-300 z-50;
+}
+
+/* === GLASS CARD (Opsional: Untuk Fasilitas / Kontak Section) === */
+.glass-card {
+  @apply bg-white/20 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30;
+}
