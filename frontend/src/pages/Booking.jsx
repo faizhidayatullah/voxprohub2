@@ -639,7 +639,7 @@ Terima kasih 🙏
         throw new Error(qrisData?.message || "Gagal generate QRIS.");
       }
 
-      const deadline = new Date(Date.now() + 15 * 60 * 1000);
+      const deadline = new Date(Date.now() + 5000);
 
       setShowConfirmModal(false);
 

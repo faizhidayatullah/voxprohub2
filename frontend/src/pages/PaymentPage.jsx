@@ -34,10 +34,7 @@ export default function PaymentPage() {
   const [open, setOpen] = useState(false);
 
   // STATE STATUS PEMBAYARAN
-  const [paymentStatus, setPaymentStatus] = useState("pending");
-  const [checking, setChecking] = useState(false);
-  const isPaid = paymentStatus === "paid";
-  const isCancelled = paymentStatus === "cancelled";
+  const [paymentStatus, setPaymentStatus] = useState(paymentStatusFromState || "pending");
 
   // redirect kalau masuk tanpa data
   useEffect(() => {
@@ -83,22 +80,33 @@ export default function PaymentPage() {
       const resp = await fetch(`http://localhost:5000/api/bookings/${bookingId}/status`);
       const data = await resp.json();
 
-      if (data.success && data.booking?.paymentStatus) {
-        setPaymentStatus(data.booking.paymentStatus);
+      if (data.success) {
+        // backend kamu mengembalikan { success, booking: { id, paymentStatus } } atau { success, paymentStatus }
+        const statusFromServer = data.paymentStatus || data.booking?.paymentStatus || "pending";
+        setPaymentStatus(String(statusFromServer).toLowerCase());
       }
     } catch (err) {
       console.error("Gagal cek status pembayaran:", err);
     }
   }
 
+  // polling status tiap 5 detik
   useEffect(() => {
     checkStatus();
     const timer = setInterval(checkStatus, 5000);
     return () => clearInterval(timer);
   }, [bookingId]);
 
-  // warna status
-  const statusColorClass = paymentStatus === "paid" ? "text-green-400" : paymentStatus === "cancelled" ? "text-red-400" : "text-pink-400";
+  // FLAG STATUS
+  const isPaid = paymentStatus === "paid";
+  const isFailed = paymentStatus === "failed";
+  const isExpired = paymentStatus === "expired" || paymentStatus === "cancelled";
+  const isPending = !isPaid && !isFailed && !isExpired;
+
+  // progress step 3
+  const step3Text = isPaid ? "Transaksi Selesai" : isFailed ? "Pembayaran Gagal" : isExpired ? "Pembayaran Expired" : "Transaksi Selesai";
+
+  const step3Color = isPaid ? "text-green-400" : isFailed ? "text-red-400" : isExpired ? "text-yellow-400" : "text-gray-300";
 
   return (
     <div className="min-h-screen bg-[#222] text-white font-[Poppins]">
@@ -158,69 +166,96 @@ export default function PaymentPage() {
         </div>
       </nav>
 
-      {/* HEADER */}
-      {isPaid ? (
-        <div className="bg-emerald-500 flex flex-col items-center justify-center min-h-[fullscreen] md:min-h-screen mt-2 px-4">
-          <div className="mx-auto w-40 h-40 mb-6">
-            <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Success" className="w-full h-full animate-bounce" />
+      {/* === SECTION 1: HEADER + PROGRESS (FULL SCREEN PERTAMA) === */}
+      <section className="mt-16 min-h-[calc(100vh-4rem)] flex flex-col">
+        {/* HEADER DINAMIS */}
+        <div className={`text-center py-16 md:py-20 transition-colors duration-300 ${isPaid ? "bg-[#16a34a]" : isFailed ? "bg-[#dc2626]" : isExpired ? "bg-[#4b5563]" : "bg-[#ffd93b]"}`}>
+          {/* Icon / animasi */}
+          <div className="mx-auto w-40 h-40 mb-6 flex items-center justify-center">
+            {isPaid ? (
+              <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="success" className="w-32 h-32 drop-shadow-lg animate-bounce" />
+            ) : isFailed ? (
+              <img src="https://cdn-icons-png.flaticon.com/512/1828/1828665.png" alt="failed" className="w-32 h-32 drop-shadow-lg animate-bounce" />
+            ) : isExpired ? (
+              <img src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png" alt="expired" className="w-32 h-32 drop-shadow-lg animate-bounce" />
+            ) : (
+              <video src={paymentAnimVideo} autoPlay loop muted playsInline className="w-40 h-40 mx-auto"></video>
+            )}
           </div>
-          <h1 className="text-3xl font-bold mb-2 text-white">Pembayaran Berhasil</h1>
-          <p className="text-sm text-white/90">Booking kamu telah dikonfirmasi.</p>
+
+          {/* Teks header */}
+          {isPaid ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2 text-white">Pembayaran Berhasil 🎉</h1>
+              <p className="text-sm text-white/80">Terima kasih, pembayaran kamu sudah dikonfirmasi. Booking siap digunakan.</p>
+            </>
+          ) : isFailed ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2 text-white">Pembayaran Gagal</h1>
+              <p className="text-sm text-white/80">Transaksi tidak dapat diproses. Silakan coba lagi.</p>
+            </>
+          ) : isExpired ? (
+            <>
+              <h1 className="text-3xl font-bold mb-2 text-white">Waktu Pembayaran Habis</h1>
+              <p className="text-sm text-white/80">Kamu tidak menyelesaikan pembayaran hingga batas waktu yang ditentukan.</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold mb-2 text-black">Menunggu Pembayaran</h1>
+              <p className="text-sm text-black/80">Silakan lakukan pembayaran dengan metode yang kamu pilih.</p>
+            </>
+          )}
         </div>
-      ) : (
-        <div className="bg-[#ffd93b] text-center py-20 mt-16">
-          <div className="mx-auto w-64 h-64 mb-6">
-            <video src={paymentAnimVideo} autoPlay loop muted playsInline className="w-64 h-64 mx-auto"></video>
-          </div>
-          <h1 className="text-3xl font-bold mb-2 text-black">Menunggu Pembayaran</h1>
-          <p className="text-sm text-black/80">Silakan lakukan pembayaran dengan metode yang kamu pilih.</p>
-        </div>
-      )}
 
-      {/* PROGRESS BAR */}
-      <div className="bg-[#111] py-12">
-        <div className="max-w-5xl mx-auto text-sm">
-          <p className="font-semibold mb-2">Progress Transaksi</p>
-
-          <div className="flex items-center gap-6">
-            {/* STEP 1 - SELALU BERHASIL */}
-            <div className="flex-1 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-lg">✓</div>
-              <div>
-                <div className="font-semibold text-green-400">Transaksi Dibuat</div>
-              </div>
-            </div>
-
-            {/* STEP 2 */}
-            <div className="flex-1 flex items-center gap-3">
-              {isPaid ? (
+        {/* PROGRESS BAR */}
+        <div className="bg-[#111] flex-1 flex items-center py-10">
+          <div className="max-w-5xl mx-auto text-sm">
+            <p className="font-semibold mb-2">Progress Transaksi</p>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Step 1 */}
+              <div className="flex-1 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-lg">✓</div>
-              ) : (
-                <div className="w-8 h-8 rounded-full border-2 border-orange-400 flex items-center justify-center text-orange-300 text-lg">⍟</div>
-              )}
-
-              <div>
-                <div className={`font-semibold ${isPaid ? "text-green-400" : "text-orange-300"}`}>Pembayaran</div>
+                <div>
+                  <div className="font-semibold text-green-400">Transaksi Dibuat</div>
+                  <div className="text-xs text-gray-400">Booking berhasil dibuat (status: pending).</div>
+                </div>
               </div>
-            </div>
 
-            {/* STEP 3 */}
-            <div className="flex-1 flex items-center gap-3">
-              {isPaid ? (
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-lg">✓</div>
-              ) : (
-                <div className="w-8 h-8 rounded-full border border-gray-500 flex items-center justify-center text-gray-500 text-lg">✓</div>
-              )}
+              {/* Step 2 */}
+              <div className="flex-1 flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg border-2 ${isPaid || isFailed || isExpired ? "border-orange-400 text-orange-300 bg-orange-900/40" : "border-orange-400 text-orange-300"}`}>
+                  ⍟
+                </div>
+                <div>
+                  <div className="font-semibold text-orange-300">Pembayaran</div>
+                  <div className="text-xs text-gray-400">
+                    {isPaid ? "Pembayaran telah diterima." : isFailed ? "Percobaan pembayaran gagal." : isExpired ? "Pembayaran tidak diselesaikan." : "Silakan lakukan pembayaran sebelum waktu habis."}
+                  </div>
+                </div>
+              </div>
 
-              <div>
-                <div className={`font-semibold ${isPaid ? "text-green-400" : "text-gray-300"}`}>Transaksi Selesai</div>
+              {/* Step 3 */}
+              <div className="flex-1 flex items-center gap-3">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-lg border-2 ${
+                    isPaid ? "bg-green-500 border-green-400 text-white" : isFailed ? "bg-red-500 border-red-400 text-white" : isExpired ? "bg-yellow-500 border-yellow-400 text-black" : "border-gray-500 text-gray-500"
+                  }`}
+                >
+                  ✓
+                </div>
+                <div>
+                  <div className={`font-semibold ${step3Color}`}>{step3Text}</div>
+                  <div className="text-xs text-gray-500">
+                    {isPaid ? "Pembayaran sukses dan booking aktif." : isFailed ? "Transaksi gagal. Silakan coba lagi." : isExpired ? "Waktu pembayaran habis. Silakan pesan ulang." : "Akan menjadi paid jika pembayaran sudah dikonfirmasi."}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* DETAIL + QR */}
+      {/* === SECTION 2: DETAIL + QR / STATUS (SCROLL KE BAWAH) === */}
       <div className="max-w-5xl mx-auto py-10 grid md:grid-cols-2 gap-8 px-4">
         {/* kiri: ringkasan pesanan */}
         <div className="bg-[#2b2b2b] rounded-2xl p-5">
@@ -290,38 +325,61 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* Kanan: pembayaran */}
-        <div className="bg-[#2b2b2b] rounded-2xl p-8 flex flex-col items-center justify-center min-h-[430px]">
+        {/* kanan: QR & status pembayaran / sukses / gagal / expired */}
+        <div className="bg-[#2b2b2b] rounded-2xl p-6 flex flex-col items-center min-h-[360px] justify-center">
           {isPaid ? (
+            // ✅ SUCCESS
             <>
-              {/* JUDUL */}
-              <h2 className="font-semibold text-xl mb-6 text-center">Pembayaran Berhasil 🎉</h2>
-
-              {/* GAMBAR */}
-              <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="success" className="w-36 h-36 mb-6 animate-[pop_0.4s_ease]" />
-
-              {/* TEKS */}
-              <p className="text-sm text-gray-300 text-center mb-6 px-4 leading-relaxed">Terima kasih! Pembayaran kamu sudah dikonfirmasi. Booking kamu sudah aktif dan siap digunakan.</p>
-
-              {/* BUTTON */}
-              <button onClick={() => navigate("/")} className="px-6 py-2 rounded-xl bg-emerald-500 text-white text-sm hover:bg-emerald-600 transition">
+              <h2 className="font-semibold text-lg mb-3 self-start">Pembayaran Berhasil 🎉</h2>
+              <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="success" className="w-32 h-32 mb-4" />
+              <p className="text-sm text-gray-300 text-center mb-4">Terima kasih! Pembayaran kamu sudah dikonfirmasi. Booking kamu sudah aktif.</p>
+              <button onClick={() => navigate("/")} className="mt-2 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm">
                 Kembali ke Beranda
               </button>
             </>
-          ) : (
+          ) : isFailed ? (
+            // ❌ FAILED
             <>
-              {/* QR NORMAL */}
+              <h2 className="font-semibold text-lg mb-3 self-start">Pembayaran Gagal ❌</h2>
+              <img src="https://cdn-icons-png.flaticon.com/512/1828/1828665.png" alt="failed" className="w-32 h-32 mb-4" />
+              <p className="text-sm text-gray-300 text-center mb-4">Transaksi tidak dapat diproses. Silakan coba lagi atau gunakan metode pembayaran lain.</p>
+              <button onClick={() => window.location.reload()} className="mt-2 px-5 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white text-sm">
+                Coba Lagi
+              </button>
+            </>
+          ) : isExpired ? (
+            // ⏱️ EXPIRED
+            <>
+              <h2 className="font-semibold text-lg mb-3 self-start">Waktu Pembayaran Habis ⏱️</h2>
+              <img src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png" alt="expired" className="w-32 h-32 mb-4" />
+              <p className="text-sm text-gray-300 text-center mb-4">Kamu tidak menyelesaikan pembayaran hingga batas waktu yang ditentukan.</p>
+              <button onClick={() => navigate("/booking")} className="mt-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-sm">
+                Pesan Ulang
+              </button>
+            </>
+          ) : (
+            // ⏳ PENDING (QR NORMAL)
+            <>
               <h2 className="font-semibold text-lg mb-4 self-start">Metode Pembayaran</h2>
-
               {qrValue ? (
                 <div className="bg-white p-3 rounded-2xl mb-4">
                   <QRCodeCanvas value={qrValue} size={224} />
                 </div>
               ) : (
-                <img src={qrisImage} className="w-56 h-56 mb-4" />
+                <>
+                  <img src={qrisImage} alt="QRIS" className="w-56 h-56 rounded-2xl border border-gray-600 mb-4" />
+                  <p className="text-[11px] text-gray-400 mb-2">
+                    QRIS masih menggunakan gambar statis (dev mode). Pastikan backend sudah mengirim
+                    <span className="font-mono"> qrData</span>.
+                  </p>
+                </>
               )}
 
-              <p className="text-xs text-gray-300 text-center mb-2">Scan QR di atas untuk melakukan pembayaran.</p>
+              <p className="text-xs text-gray-300 text-center mb-1">Scan QR di atas untuk melakukan pembayaran.</p>
+              <p className="text-xs text-gray-400 mb-3">
+                Status Pembayaran:{" "}
+                <span className={`font-semibold ${paymentStatus === "paid" ? "text-green-400" : paymentStatus === "cancelled" || paymentStatus === "expired" ? "text-yellow-400" : "text-pink-400"}`}>{paymentStatus.toUpperCase()}</span>
+              </p>
 
               <button onClick={checkStatus} className="mt-2 px-4 py-1 rounded-full bg-pink-500 text-xs text-white">
                 Cek Status Pembayaran

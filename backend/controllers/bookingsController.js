@@ -112,9 +112,9 @@ export const updateBooking = async (req, res) => {
   try {
     await pool.query(
       `UPDATE bookings 
-       SET nama=?, telepon=?, ruangan=?, tanggal=?, jam_mulai=?, durasi=?, detail=?, catatan=?, status=?
+       SET nama=?, telepon=?, ruangan=?, tanggal=?, jam_mulai=?, durasi=?, detail=?, catatan=?
        WHERE id=?`,
-      [nama, telepon, ruangan, tanggal, jam_mulai, durasi, detail, catatan, status, id]
+      [nama, telepon, ruangan, tanggal, jam_mulai, durasi, detail, catatan, id]
     );
 
     res.json({ success: true, message: "Booking berhasil diperbarui" });
